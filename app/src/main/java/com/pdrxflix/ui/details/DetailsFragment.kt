@@ -20,6 +20,8 @@ class DetailsFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: DetailsViewModel by viewModels()
+    
+    // O Adapter agora vai cuidar do clique no episódio
     private val episodeAdapter = EpisodeAdapter { episode ->
         (activity as? AppNavigator)?.openPlayer(
             collectionId = collectionId,
@@ -46,12 +48,15 @@ class DetailsFragment : Fragment() {
         binding.recyclerEpisodes.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = episodeAdapter
+            // Mantive a decoração, mas talvez você queira ajustar os espaços depois
             addItemDecoration(SpacesItemDecoration(horizontal = 18, vertical = 18))
         }
 
         binding.btnBack.setOnClickListener { (activity as? AppNavigator)?.closeTransientScreen() }
+        
         binding.btnPlayAll.setOnClickListener {
-            val first = episodeAdapter.currentList.firstOrNull() ?: return@setOnClickListener
+            // Play no primeiríssimo episódio disponível
+            val first = viewModel.selectedCollection.value?.videos?.firstOrNull() ?: return@setOnClickListener
             (activity as? AppNavigator)?.openPlayer(collectionId, first.filePath, 0L, first.episodeIndex)
         }
 
@@ -65,12 +70,16 @@ class DetailsFragment : Fragment() {
             binding.emptyState.visibility = View.GONE
             binding.title.text = collection.title
             binding.episodeCount.text = getString(R.string.episodes_count, collection.itemCount)
+            
             Glide.with(this)
                 .load(collection.coverPath ?: R.drawable.ic_placeholder_cover)
                 .placeholder(R.drawable.ic_placeholder_cover)
                 .centerCrop()
                 .into(binding.coverImage)
-            episodeAdapter.submitList(collection.videos)
+
+            // AQUI ESTÁ A MÁGICA:
+            // Enviamos a coleção inteira para o adapter, e ele vai se organizar sozinho
+            episodeAdapter.updateData(collection)
         }
     }
 
