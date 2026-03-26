@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.addCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -20,25 +21,25 @@ class DetailsFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: DetailsViewModel by viewModels()
-    
-    // O Adapter agora vai cuidar do clique no episódio
-    private val episodeAdapter = EpisodeAdapter { episode ->
-        (activity as? AppNavigator)?.openPlayer(
-            collectionId = collectionId,
-            videoPath = episode.filePath,
-            startPositionMs = 0L,
-            episodeIndex = episode.episodeIndex
-        )
-    }
+
+    private val episodeAdapter = EpisodeAdapter(
+        historyProvider = { path -> viewModel.getRecordForVideo(path) },
+        onClick = { episode ->
+            (activity as? AppNavigator)?.openPlayer(
+                collectionId = collectionId,
+                videoPath = episode.filePath,
+                startPositionMs = viewModel.getRecordForVideo(episode.filePath)?.lastPositionMs ?: 0L,
+                episodeIndex = episode.episodeIndex
+            )
+        }
+    )
 
     private val collectionId: Long by lazy {
         requireArguments().getLong(ARG_COLLECTION_ID)
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         _binding = FragmentDetailsBinding.inflate(inflater, container, false)
         return binding.root
@@ -48,15 +49,24 @@ class DetailsFragment : Fragment() {
         binding.recyclerEpisodes.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = episodeAdapter
-            // Mantive a decoração, mas talvez você queira ajustar os espaços depois
             addItemDecoration(SpacesItemDecoration(horizontal = 18, vertical = 18))
         }
 
-        binding.btnBack.setOnClickListener { (activity as? AppNavigator)?.closeTransientScreen() }
-        
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+            if (!episodeAdapter.handleBackPress()) {
+                (activity as? AppNavigator)?.closeTransientScreen()
+            }
+        }
+
+        binding.btnBack.setOnClickListener { 
+            if (!episodeAdapter.handleBackPress()) {
+                (activity as? AppNavigator)?.closeTransientScreen()
+            }
+        }
+
         binding.btnPlayAll.setOnClickListener {
-            // Play no primeiríssimo episódio disponível
-            val first = viewModel.selectedCollection.value?.videos?.firstOrNull() ?: return@setOnClickListener
+            val collection = viewModel.selectedCollection.value ?: return@setOnClickListener
+            val first = collection.videos.firstOrNull() ?: return@setOnClickListener
             (activity as? AppNavigator)?.openPlayer(collectionId, first.filePath, 0L, first.episodeIndex)
         }
 
@@ -77,8 +87,6 @@ class DetailsFragment : Fragment() {
                 .centerCrop()
                 .into(binding.coverImage)
 
-            // AQUI ESTÁ A MÁGICA:
-            // Enviamos a coleção inteira para o adapter, e ele vai se organizar sozinho
             episodeAdapter.updateData(collection)
         }
     }

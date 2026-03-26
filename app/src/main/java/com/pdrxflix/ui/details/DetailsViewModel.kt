@@ -1,24 +1,30 @@
 package com.pdrxflix.ui.details
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableStateFlow
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.pdrxflix.PdrXFlixApp
 import com.pdrxflix.data.model.MediaCollection
+import com.pdrxflix.data.model.PlaybackRecord
+import com.pdrxflix.data.repository.LocalMediaRepository
 import kotlinx.coroutines.launch
 
-class DetailsViewModel(app: Application) : AndroidViewModel(app) {
-    private val repository = (app as PdrXFlixApp).repository
-    val selectedCollection = MutableLiveData<MediaCollection?>()
+class DetailsViewModel(
+    private val repository: LocalMediaRepository
+) : ViewModel() {
+
+    private val _selectedCollection = MutableStateFlow<MediaCollection?>(null)
+    val selectedCollection: LiveData<MediaCollection?> = _selectedCollection.asLiveData()
 
     fun load(collectionId: Long) {
         viewModelScope.launch {
-            selectedCollection.value = repository.getCollection(collectionId)
+            val collection = repository.findCollectionById(collectionId)
+            _selectedCollection.value = collection
         }
     }
 
-    fun saveAutoPlay(enabled: Boolean) = repository.setAutoPlay(enabled)
-
-    fun isAutoPlayEnabled(): Boolean = repository.getAutoPlay()
+    fun getRecordForVideo(videoPath: String): PlaybackRecord? {
+        return repository.getRecordForVideo(videoPath)
+    }
 }

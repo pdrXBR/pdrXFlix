@@ -18,7 +18,6 @@ data class MediaCollection(
     val coverPath: String?,
     val videos: List<VideoItem>,
 ) : Serializable {
-    
     val itemCount: Int get() = videos.size
 
     fun getSeasonNames(): List<String> {
@@ -43,6 +42,9 @@ data class PlaybackRecord(
 ) : Serializable {
     val progress: Float
         get() = if (durationMs > 0L) lastPositionMs.toFloat() / durationMs.toFloat() else 0f
+
+    // Define se o episódio foi concluído (90% assistido)
+    val isFinished: Boolean get() = progress > 0.9f
 }
 
 data class LibraryUiState(

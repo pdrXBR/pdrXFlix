@@ -1,5 +1,6 @@
 package com.pdrxflix.ui.player
 
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -48,13 +49,13 @@ class PlayerFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        // Força a orientação horizontal assim que a view é criada
+        enterFullscreen()
+        
         binding.btnBack.setOnClickListener { closeAndSave() }
         binding.btnNext.setOnClickListener { playNextEpisodeIfAvailable() }
-        binding.btnResume.setOnClickListener {
-            player?.seekTo(startPositionMs)
-            player?.play()
-        }
-
+        
+        // Volume
         binding.volumeSeek.max = 100
         binding.volumeSeek.progress = 100
         binding.volumeSeek.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
@@ -65,7 +66,6 @@ class PlayerFragment : Fragment() {
             override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) = Unit
         })
 
-        enterFullscreen()
         setupPlayer()
     }
 
@@ -81,6 +81,10 @@ class PlayerFragment : Fragment() {
         player = exoPlayer
 
         binding.playerView.player = exoPlayer
+        
+        // Ajusta o vídeo para preencher a tela (zoom) se necessário
+        binding.playerView.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
+        
         binding.title.text = file.nameWithoutExtension
 
         exoPlayer.setMediaItem(androidx.media3.common.MediaItem.fromUri(Uri.fromFile(file)))
@@ -92,11 +96,8 @@ class PlayerFragment : Fragment() {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == androidx.media3.common.Player.STATE_ENDED) {
                     saveCurrentProgress(forceComplete = true)
-                    if (repository.getAutoPlay()) {
-                        playNextEpisodeIfAvailable()
-                    } else {
-                        closeAndSave()
-                    }
+                    // Verifica autoplay no repository
+                    playNextEpisodeIfAvailable()
                 }
             }
         })
@@ -123,13 +124,16 @@ class PlayerFragment : Fragment() {
         val exo = player ?: return
         val duration = exo.duration.takeIf { it > 0L } ?: 0L
         val position = if (forceComplete) duration else exo.currentPosition
+        
+        val collection = repository.findCollectionById(collectionId)
+        
         repository.saveProgress(
             PlaybackRecord(
                 collectionId = collectionId,
-                collectionTitle = repository.getCollection(collectionId)?.title.orEmpty(),
+                collectionTitle = collection?.title.orEmpty(),
                 videoPath = videoPath,
                 videoTitle = File(videoPath).nameWithoutExtension,
-                coverPath = repository.getCollection(collectionId)?.coverPath,
+                coverPath = collection?.coverPath,
                 episodeIndex = episodeIndex,
                 lastPositionMs = position,
                 durationMs = duration,
@@ -139,16 +143,23 @@ class PlayerFragment : Fragment() {
     }
 
     private fun playNextEpisodeIfAvailable() {
-        val next = repository.resolveNextVideo(collectionId, episodeIndex) ?: run {
+        // Supondo que seu repository tenha essa lógica de buscar o próximo VideoItem
+        val next = repository.collections.value
+            .find { it.id == collectionId }
+            ?.videos?.getOrNull(episodeIndex + 1)
+
+        if (next != null) {
+            saveCurrentProgress()
+            releasePlayer()
+            (activity as? AppNavigator)?.openPlayer(collectionId, next.filePath, 0L, next.episodeIndex)
+        } else {
             closeAndSave()
-            return
         }
-        closeAndSave()
-        (activity as? AppNavigator)?.openPlayer(collectionId, next.filePath, 0L, next.episodeIndex)
     }
 
     private fun closeAndSave() {
         saveCurrentProgress()
+        exitFullscreen() // Volta a tela para "em pé" antes de sair
         releasePlayer()
         (activity as? AppNavigator)?.closeTransientScreen()
     }
@@ -159,29 +170,38 @@ class PlayerFragment : Fragment() {
         binding.playerView.player = null
         player?.release()
         player = null
-        exitFullscreen()
     }
 
     private fun enterFullscreen() {
         val window = requireActivity().window
+        // 1. Esconde as barras
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowInsetsControllerCompat(window, window.decorView).hide(WindowInsetsCompat.Type.systemBars())
+        WindowInsetsControllerCompat(window, window.decorView).let { controller ->
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+        // 2. Gira a tela para Horizontal (Sensor Landscape permite girar pros dois lados deitados)
+        requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
     }
 
     private fun exitFullscreen() {
         val window = requireActivity().window
+        // 1. Mostra as barras
         WindowCompat.setDecorFitsSystemWindows(window, true)
         WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
+        // 2. Volta a tela para Em Pé (Portrait)
+        requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     }
 
     override fun onPause() {
         super.onPause()
-        saveCurrentProgress()
+        player?.pause()
     }
 
     override fun onStop() {
         super.onStop()
-        saveCurrentProgress()
+        // Garantir que saia do fullscreen se o app for minimizado
+        exitFullscreen()
         releasePlayer()
     }
 
