@@ -1,13 +1,13 @@
 package com.pdrxflix.ui.details
 
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableStateFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.pdrxflix.data.model.MediaCollection
 import com.pdrxflix.data.model.PlaybackRecord
 import com.pdrxflix.data.repository.LocalMediaRepository
+import kotlinx.coroutines.flow.MutableStateFlow // IMPORT ADICIONADO
 import kotlinx.coroutines.launch
 
 class DetailsViewModel(

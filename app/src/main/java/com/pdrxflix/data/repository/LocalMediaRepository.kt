@@ -15,7 +15,10 @@ import kotlin.math.abs
 
 class LocalMediaRepository(private val context: Context) {
 
+    // Simulação simples de SharedPreferences para as preferências
+    private val prefs = context.getSharedPreferences("pdrx_prefs", Context.MODE_PRIVATE)
     private val playbackPreferences = PlaybackPreferences(context.applicationContext)
+
     private val _collections = MutableStateFlow<List<MediaCollection>>(emptyList())
     val collections: StateFlow<List<MediaCollection>> = _collections
 
@@ -24,54 +27,53 @@ class LocalMediaRepository(private val context: Context) {
 
     val rootDirectory: File = File(Environment.getExternalStorageDirectory(), "Animes_server")
 
+    // Funções de Preferência (AutoPlay)
+    fun getAutoPlay(): Boolean = prefs.getBoolean("auto_play", true)
+    fun setAutoPlay(enabled: Boolean) = prefs.edit().putBoolean("auto_play", enabled).apply()
+
+    // Funções de Progresso
+    fun saveProgress(record: PlaybackRecord) {
+        playbackPreferences.saveRecord(record)
+    }
+
+    fun getRecordForVideo(path: String): PlaybackRecord? {
+        return playbackPreferences.loadRecords().firstOrNull { it.videoPath == path }
+    }
+
+    fun getCollection(id: Long): MediaCollection? = _collections.value.firstOrNull { it.id == id }
+
     suspend fun refreshCatalog() = withContext(Dispatchers.IO) {
         val scanned = scanRootDirectory(rootDirectory)
         _collections.value = scanned
         
-        // AGORA REAGRUPA POR ANIME:
         val allRecords = playbackPreferences.loadRecords()
-        val grouped = allRecords.groupBy { it.collectionId }
-            .mapNotNull { entry -> 
-                entry.value.maxByOrNull { it.updatedAt } 
-            }
+        _continueWatching.value = allRecords.groupBy { it.collectionId }
+            .mapNotNull { it.value.maxByOrNull { rec -> rec.updatedAt } }
             .sortedByDescending { it.updatedAt }
-        
-        _continueWatching.value = grouped
     }
 
-    fun findCollectionById(id: Long): MediaCollection? = _collections.value.firstOrNull { it.id == id }
-
-    fun getResumeRecord(videoPath: String): PlaybackRecord? {
-        // Busca o registro específico de um vídeo para pintar as cores
-        return playbackPreferences.loadRecords().firstOrNull { it.videoPath == videoPath }
-    }
+    fun findCollectionById(id: Long): MediaCollection? = getCollection(id)
 
     private fun scanRootDirectory(root: File): List<MediaCollection> {
         if (!root.exists() || !root.isDirectory) return emptyList()
-        val animeFolders = root.listFiles { file -> file.isDirectory && !file.name.startsWith(".") }.orEmpty()
+        val folders = root.listFiles { it.isDirectory && !it.name.startsWith(".") }.orEmpty()
         
-        return animeFolders.mapNotNull { folder ->
+        return folders.mapNotNull { folder ->
             val allVideos = mutableListOf<VideoItem>()
             val stableId = folder.absolutePath.hashCode().toLong().absoluteValue()
 
-            // Vídeos na raiz
-            folder.listFiles { f -> f.isFile && isVideoFile(f) }?.forEachIndexed { i, f ->
-                allVideos.add(VideoItem(f.name, f.absolutePath, f.nameWithoutExtension, i, stableId, "Principal"))
+            folder.walkTopDown().maxDepth(2).filter { it.isFile && isVideoFile(it) }.forEach { file ->
+                val sName = if (file.parentFile?.absolutePath == folder.absolutePath) "Principal" else file.parentFile!!.name
+                allVideos.add(VideoItem(file.name, file.absolutePath, file.nameWithoutExtension, 0, stableId, sName))
             }
 
-            // Vídeos em subpastas (Temporadas)
-            folder.listFiles { f -> f.isDirectory }?.forEach { sub ->
-                sub.listFiles { f -> f.isFile && isVideoFile(f) }?.forEachIndexed { i, f ->
-                    allVideos.add(VideoItem(f.name, f.absolutePath, f.nameWithoutExtension, i, stableId, sub.name))
-                }
-            }
-
-            if (allVideos.isEmpty()) return@mapNotNull null
-            MediaCollection(stableId, folder.name, folder.absolutePath, findCover(folder)?.absolutePath, allVideos)
-        }.sortedBy { it.title.lowercase(Locale.getDefault()) }
+            val finalVideos = allVideos.mapIndexed { i, v -> v.copy(episodeIndex = i) }
+            if (finalVideos.isEmpty()) return@mapNotNull null
+            MediaCollection(stableId, folder.name, folder.absolutePath, findCover(folder)?.absolutePath, finalVideos)
+        }.sortedBy { it.title.lowercase() }
     }
 
-    private fun isVideoFile(f: File) = f.extension.lowercase() in setOf("mp4", "mkv", "avi", "webm")
-    private fun findCover(f: File) = f.listFiles { file -> file.extension.lowercase() in setOf("jpg", "png", "jpeg") }?.firstOrNull()
-    private fun Long.absoluteValue(): Long = abs(this)
+    private fun isVideoFile(f: File) = f.extension.lowercase() in setOf("mp4", "mkv", "avi")
+    private fun findCover(f: File) = f.listFiles { it.extension.lowercase() in setOf("jpg", "png") }?.firstOrNull()
+    private fun Long.absoluteValue() = abs(this)
 }
