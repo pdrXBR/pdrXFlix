@@ -35,7 +35,7 @@
         android:layout_marginTop="8dp"
         app:use_controller="true"
         app:show_buffering="when_playing"
-        app:controller_auto_show="true"
+        app:show_timeout="3000" 
         app:layout_constraintTop_toBottomOf="@id/title"
         app:layout_constraintBottom_toTopOf="@id/controlPanel"
         app:layout_constraintStart_toStartOf="parent"
