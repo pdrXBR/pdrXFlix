@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_primary">#0B0B0E</color>
+    <color name="bg_secondary">#17171C</color>
+    <color name="bg_tertiary">#222228</color>
+    <color name="yellow_primary">#FFD400</color>
+    <color name="yellow_dark">#C9A700</color>
+    <color name="text_primary">#F5F5F7</color>
+    <color name="text_secondary">#A1A1AA</color>
+    <color name="error_red">#FF6B6B</color>
+    <color name="bottom_nav_color">#FFD400</color>
+</resources>

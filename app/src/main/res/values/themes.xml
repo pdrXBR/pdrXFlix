@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PdrXFlix" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/yellow_primary</item>
+        <item name="colorOnPrimary">#000000</item>
+        <item name="colorSecondary">@color/yellow_dark</item>
+        <item name="colorOnSecondary">#000000</item>
+        <item name="android:statusBarColor">@color/bg_primary</item>
+        <item name="android:navigationBarColor">@color/bg_primary</item>
+        <item name="android:windowBackground">@color/bg_primary</item>
+        <item name="materialButtonStyle">@style/Widget.Material3.Button</item>
+    </style>
+</resources>

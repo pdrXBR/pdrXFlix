@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">pdrXFlix</string>
+    <string name="continue_watching">Continuar assistindo</string>
+    <string name="all_titles">Todos os Animes/Filmes</string>
+    <string name="search_hint">Buscar título</string>
+    <string name="refresh">Atualizar</string>
+    <string name="settings">Configurações</string>
+    <string name="empty_state">Nenhum vídeo encontrado em /storage/emulated/0/Animes_server/</string>
+    <string name="episodes_count">%1$d episódios</string>
+    <string name="play">Play</string>
+    <string name="back">Voltar</string>
+    <string name="resume">Retomar</string>
+    <string name="next_episode">Próximo episódio</string>
+    <string name="volume">Volume</string>
+    <string name="file_not_found">Arquivo de vídeo não encontrado.</string>
+    <string name="autoplay_next_episode">Auto-play do próximo episódio</string>
+    <string name="grant_storage_access">Conceder acesso ao armazenamento</string>
+    <string name="rescan_library">Reescanear biblioteca</string>
+    <string name="storage_note">A biblioteca é lida diretamente de /storage/emulated/0/Animes_server/.</string>
+    <string name="item_count_format">%1$d itens</string>
+</resources>
