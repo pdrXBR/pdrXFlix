@@ -138,7 +138,7 @@ class LocalMediaRepository(private val context: Context) {
     private data class NaturalPart(val text: String, val number: Int, val isInt: Boolean)
 
     private fun splitNatural(input: String): List<NaturalPart> {
-        val regex = Regex("(\d+|\D+)")
+        val regex = Regex("(\\d+|\\D+)")
         return regex.findAll(input).map { match ->
             val token = match.value
             val intValue = token.toIntOrNull()

@@ -10,6 +10,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.pdrxflix.R
 import com.pdrxflix.PdrXFlixApp
 import com.pdrxflix.data.model.PlaybackRecord
 import com.pdrxflix.databinding.FragmentPlayerBinding
