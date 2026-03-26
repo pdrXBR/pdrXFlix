@@ -10,6 +10,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.pdrxflix.R
+import com.pdrxflix.PdrXFlixApp
 import com.pdrxflix.databinding.FragmentDetailsBinding
 import com.pdrxflix.ui.AppNavigator
 import com.pdrxflix.ui.adapters.EpisodeAdapter
@@ -20,7 +21,10 @@ class DetailsFragment : Fragment() {
     private var _binding: FragmentDetailsBinding? = null
     private val binding get() = _binding!!
 
-    private val viewModel: DetailsViewModel by viewModels()
+    // Declaração do ViewModel usando a Factory para evitar o crash
+    private val viewModel: DetailsViewModel by viewModels {
+        DetailsViewModel.Factory((requireActivity().application as PdrXFlixApp).repository)
+    }
 
     private val episodeAdapter = EpisodeAdapter(
         historyProvider = { path -> viewModel.getRecordForVideo(path) },
@@ -52,6 +56,7 @@ class DetailsFragment : Fragment() {
             addItemDecoration(SpacesItemDecoration(horizontal = 18, vertical = 18))
         }
 
+        // Botão voltar físico/gesto
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
             if (!episodeAdapter.handleBackPress()) {
                 (activity as? AppNavigator)?.closeTransientScreen()
@@ -79,7 +84,9 @@ class DetailsFragment : Fragment() {
             }
             binding.emptyState.visibility = View.GONE
             binding.title.text = collection.title
-            binding.episodeCount.text = getString(R.string.episodes_count, collection.itemCount)
+            
+            // Se der erro aqui, verifique se episodes_count existe no strings.xml
+            binding.episodeCount.text = "${collection.itemCount} Episódios"
             
             Glide.with(this)
                 .load(collection.coverPath ?: R.drawable.ic_placeholder_cover)
