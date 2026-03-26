@@ -1,30 +1,26 @@
 package com.pdrxflix.data.model
 
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
+import java.io.Serializable
 
-@Parcelize
 data class VideoItem(
     val fileName: String,
     val filePath: String,
     val displayName: String,
     val episodeIndex: Int,
     val folderId: Long,
-    val seasonName: String = "Principal" // <-- Adicionado isso
-) : Parcelable
+    val seasonName: String = "Principal"
+) : Serializable
 
-@Parcelize
 data class MediaCollection(
     val id: Long,
     val title: String,
     val folderPath: String,
     val coverPath: String?,
     val videos: List<VideoItem>,
-) : Parcelable {
+) : Serializable {
     
     val itemCount: Int get() = videos.size
 
-    // ESTAS DUAS FUNÇÕES SÃO ESSENCIAIS PARA O ADAPTER FUNCIONAR:
     fun getSeasonNames(): List<String> {
         return videos.map { it.seasonName }.distinct().sorted()
     }
@@ -34,7 +30,6 @@ data class MediaCollection(
     }
 }
 
-@Parcelize
 data class PlaybackRecord(
     val collectionId: Long,
     val collectionTitle: String,
@@ -45,7 +40,7 @@ data class PlaybackRecord(
     val lastPositionMs: Long,
     val durationMs: Long,
     val updatedAt: Long,
-) : Parcelable {
+) : Serializable {
     val progress: Float
         get() = if (durationMs > 0L) lastPositionMs.toFloat() / durationMs.toFloat() else 0f
 }
@@ -57,10 +52,9 @@ data class LibraryUiState(
     val query: String = "",
 )
 
-@Parcelize
 data class PlayerArgs(
     val collectionId: Long,
     val videoPath: String,
     val startPositionMs: Long,
     val episodeIndex: Int,
-) : Parcelable
+) : Serializable
